@@ -5,6 +5,7 @@
 
 from typing import List, Dict, Any, Optional
 import httpx
+import asyncio
 
 from src.config import config
 from src.utils.logger import get_logger
@@ -19,28 +20,37 @@ class MetroAPIClient:
         self,
         base_url: Optional[str] = None,
         api_key: Optional[str] = None,
-        timeout: int = None
+        timeout: int = None,
+        max_retries: int = 3
     ):
         self.base_url = base_url or config.METRO_API_BASE_URL
         self.api_key = api_key or config.METRO_API_KEY
         self.timeout = timeout or config.METRO_API_TIMEOUT
+        self.max_retries = max_retries
+
+        # Known problematic endpoints that should be handled gracefully
+        self.problematic_endpoints = {
+            "GetAnnouncementsByLine": "Hat duyuruları şu anda alınamıyor"
+        }
     
     async def _request(
         self,
         method: str,
         endpoint: str,
-        data: Optional[Dict] = None
+        data: Optional[Dict] = None,
+        retry_count: int = 0
     ) -> Any:
         """
-        API isteği yap
+        API isteği yap (with retry logic)
 
         Args:
             method: HTTP method (GET/POST)
             endpoint: API endpoint
             data: POST data
+            retry_count: Current retry attempt
 
         Returns:
-            API yanıtı
+            API yanıtı (Data key'i extract edilmiş)
         """
         url = f"{self.base_url}/{endpoint}"
 
@@ -50,7 +60,12 @@ class MetroAPIClient:
             headers["Authorization"] = f"Bearer {self.api_key}"
 
         try:
-            async with httpx.AsyncClient(timeout=float(self.timeout)) as client:
+            # Increase timeout for known slow endpoints
+            timeout = float(self.timeout)
+            if any(prob_ep in endpoint for prob_ep in self.problematic_endpoints.keys()):
+                timeout = min(timeout * 1.5, 90)  # Max 90 seconds
+
+            async with httpx.AsyncClient(timeout=timeout) as client:
                 if method == "GET":
                     response = await client.get(url, headers=headers)
                 else:
@@ -59,18 +74,73 @@ class MetroAPIClient:
                 response.raise_for_status()
                 result = response.json()
 
+                # Metro API response format: {"Success": bool, "Error": {...}, "Data": [...]}
+                # Data key'ini extract et
+                if isinstance(result, dict):
+                    if result.get("Success") and "Data" in result:
+                        data_result = result.get("Data", [])
+                        # Handle None data
+                        if data_result is None:
+                            data_result = []
+                        logger.debug("API request success",
+                                   endpoint=endpoint,
+                                   count=len(data_result) if isinstance(data_result, list) else 0)
+                        return data_result
+                    elif not result.get("Success"):
+                        error = result.get("Error", {})
+                        logger.error("Metro API returned error",
+                                   endpoint=endpoint,
+                                   error_title=error.get("Title"),
+                                   error_message=error.get("Message"))
+                        # Empty response dön hata yerine (graceful degradation)
+                        return []
+
                 logger.debug("API request success", endpoint=endpoint)
-                return result
+                return result if result is not None else []
 
         except httpx.HTTPStatusError as e:
-            logger.error("Metro API error", endpoint=endpoint, status=e.response.status_code)
-            raise
+            # Check if this is a known problematic endpoint
+            endpoint_name = endpoint.split('/')[-1].split('?')[0]
+            if endpoint_name in self.problematic_endpoints and e.response.status_code == 500:
+                logger.warning(
+                    f"Known problematic endpoint failed: {endpoint_name}",
+                    status=e.response.status_code,
+                    message=self.problematic_endpoints[endpoint_name]
+                )
+                return []
+
+            # Retry logic for temporary failures (429, 502, 503, 504)
+            if e.response.status_code in [429, 502, 503, 504] and retry_count < self.max_retries:
+                wait_time = 2 ** retry_count  # Exponential backoff: 1s, 2s, 4s
+                logger.warning(
+                    f"Retrying {endpoint} after {wait_time}s (attempt {retry_count + 1}/{self.max_retries})",
+                    status=e.response.status_code
+                )
+                await asyncio.sleep(wait_time)
+                return await self._request(method, endpoint, data, retry_count + 1)
+
+            logger.error("Metro API HTTP error",
+                        endpoint=endpoint,
+                        status=e.response.status_code,
+                        response_text=e.response.text[:200] if e.response.text else "No response text")
+            return []
+
         except httpx.TimeoutException:
-            logger.error("Metro API timeout", endpoint=endpoint)
-            raise
+            # Retry on timeout
+            if retry_count < self.max_retries:
+                wait_time = 2 ** retry_count
+                logger.warning(
+                    f"Timeout, retrying {endpoint} after {wait_time}s (attempt {retry_count + 1}/{self.max_retries})"
+                )
+                await asyncio.sleep(wait_time)
+                return await self._request(method, endpoint, data, retry_count + 1)
+
+            logger.error("Metro API timeout after retries", endpoint=endpoint, retries=retry_count)
+            return []
+
         except Exception as e:
-            logger.error("Metro API request failed", endpoint=endpoint, error=str(e))
-            raise
+            logger.error("Metro API request failed", endpoint=endpoint, error=str(e), error_type=type(e).__name__)
+            return []
     
     async def _get(self, endpoint: str) -> Any:
         """GET isteği"""
@@ -149,15 +219,26 @@ class MetroAPIClient:
     
     async def get_timetable(
         self,
-        line_id: int,
-        station_id: int,
-        direction: int
-    ) -> Dict:
-        """Sefer tarifesini al"""
+        boarding_station_id: int,
+        direction_id: int,
+        date_time: Optional[str] = None
+    ) -> List[Dict]:
+        """
+        Sefer tarifesini al
+
+        Args:
+            boarding_station_id: Biniş istasyon ID
+            direction_id: Yön ID
+            date_time: Tarih/saat (opsiyonel, ISO format)
+        """
+        from datetime import datetime
+        if not date_time:
+            date_time = datetime.now().isoformat()
+
         return await self._post("GetTimeTable", {
-            "LineId": line_id,
-            "StationId": station_id,
-            "Direction": direction
+            "BoardingStationId": boarding_station_id,
+            "DirectionId": direction_id,
+            "DateTime": date_time
         })
     
     # =========================================================================
@@ -185,15 +266,26 @@ class MetroAPIClient:
     
     async def get_station_between_time(
         self,
-        line_id: int,
-        from_station: int,
-        to_station: int
-    ) -> Dict:
-        """İstasyonlar arası süreyi al"""
+        boarding_station_id: int,
+        direction_id: int,
+        date_time: Optional[str] = None
+    ) -> List[Dict]:
+        """
+        İstasyonların başlangıç istasyonuna olan uzaklık sürelerini listeler
+
+        Args:
+            boarding_station_id: Biniş istasyon ID
+            direction_id: Yön ID
+            date_time: Tarih/saat (opsiyonel)
+        """
+        from datetime import datetime
+        if not date_time:
+            date_time = datetime.now().isoformat()
+
         return await self._post("GetStationBetweenTime", {
-            "LineId": line_id,
-            "FromStationId": from_station,
-            "ToStationId": to_station
+            "BoardingStationId": boarding_station_id,
+            "DirectionId": direction_id,
+            "DateTime": date_time
         })
     
     # =========================================================================

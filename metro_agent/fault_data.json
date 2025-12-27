@@ -1,0 +1,63 @@
+{
+  "report_id": "MET-20251227-151011",
+  "timestamp": "2025-12-27T15:10:11.592038",
+  "entities": {
+    "station": "Kadıköy",
+    "line": "M4",
+    "equipment": "Asansör",
+    "location_detail": "Giriş katı",
+    "problem_description": "Asansör çalışmıyor",
+    "severity_hint": "Erişim engeli - engelli vatandaşlar mağdur",
+    "accessibility_impact": true
+  },
+  "classification": {
+    "fault_type_id": "FT-ASANSOR-001",
+    "fault_type_name": "Asansör Mekanik Arıza",
+    "fault_category": "ELEVATOR",
+    "technical_object_id": "TO-ASN-001",
+    "technical_object_name": "Yolcu Asansörü",
+    "priority": "HIGH",
+    "priority_reason": "Engelli erişimini engelliyor - WCAG 2.1 uyumluluk ihlali",
+    "target_department": "Elektro-Mekanik Sistemler Müdürlüğü",
+    "sub_department": "Asansör ve Yürüyen Merdiven Bakım Birimi",
+    "estimated_hours": 2,
+    "sla_hours": 2
+  },
+  "enrichment": {
+    "station_info": {
+      "Id": 107,
+      "Name": "Kadıköy",
+      "LineId": 4,
+      "LineName": "M4 (Kadıköy-Tavşantepe)",
+      "DetailInfo": {
+        "Lift": 2,
+        "Escolator": 4,
+        "WC": true,
+        "BabyRoom": true,
+        "Latitude": "40.9907",
+        "Longitude": "29.0258"
+      }
+    },
+    "line_info": {
+      "Id": 4,
+      "Name": "M4 (Kadıköy-Tavşantepe)",
+      "ShortDescription": "Kadıköy-Tavşantepe Metro Hattı"
+    },
+    "alternatives": [
+      "Merdiven kullanılabilir (engelli erişimine uygun değil)",
+      "Yürüyen merdiven kullanılabilir (tekerlekli sandalye için uygun değil)",
+      "İstasyon görevlilerinden yardım istenebilir"
+    ],
+    "passenger_impact": {
+      "affected_groups": [
+        "Engelli vatandaşlar",
+        "Bebek arabalı aileler",
+        "Yaşlı yolcular",
+        "Bavullu yolcular"
+      ],
+      "estimated_daily_affected": 150,
+      "accessibility_compliance": "İHLAL - Asansör zorunlu erişim yolu",
+      "legal_reference": "5378 Sayılı Engelliler Hakkında Kanun, Md. 7"
+    }
+  }
+}

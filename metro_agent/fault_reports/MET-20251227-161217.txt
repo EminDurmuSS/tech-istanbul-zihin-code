@@ -1,0 +1,67 @@
+
+════════════════════════════════════════════════════════════════
+                     İBB METRO İSTANBUL
+                  ARIZA BİLDİRİM RAPORU
+════════════════════════════════════════════════════════════════
+
+RAPOR NUMARASI: MET-20251227-161217
+TARİH: 27.12.2025 16:12:34
+
+═══════════════════════════════════════════════════════════════
+1. ÖZET BİLGİLER
+═══════════════════════════════════════════════════════════════
+
+İstasyon         : BAGCILAR MEYDAN
+Hat              : M1B
+Konum Detayı     : Turnike katı ile cadde arasındaki asansör
+Ekipman          : asansör
+Arıza Açıklaması : çalışmıyor
+
+═══════════════════════════════════════════════════════════════
+2. SINIFLANDIRMA
+═══════════════════════════════════════════════════════════════
+
+Arıza Tipi       : Arıza
+Arıza Kategorisi : ELEVATOR
+Teknik Nesne     : Asansör
+
+Öncelik Seviyesi : HIGH
+Öncelik Gerekçesi: Ana erişim kapalı, kritik ekipman arızası
+
+═══════════════════════════════════════════════════════════════
+3. YÖNLENDİRME
+═══════════════════════════════════════════════════════════════
+
+Sorumlu Departman: Asansör Bakım Birimi
+Alt Birim        : Asansör Bakım Ekibi
+
+═══════════════════════════════════════════════════════════════
+4. ZAMAN PLANLAMA
+═══════════════════════════════════════════════════════════════
+
+SLA Süresi       : 4 saat
+Tahmini Çözüm    : 27.12.2025 (Tahmini 4 saat içinde)
+
+═══════════════════════════════════════════════════════════════
+5. DETAYLI BİLGİLER
+═══════════════════════════════════════════════════════════════
+
+--- İSTASYON TESİSLERİ ---
+Asansör Sayısı      : 29
+Yürüyen Merdiven    : 0
+WC                  : Yok
+Bebek Bakım Odası   : Yok
+Mescit              : Yok
+
+═══════════════════════════════════════════════════════════════
+6. KONUŞMA GEÇMİŞİ
+═══════════════════════════════════════════════════════════════
+
+[1] Bağcılar Meydan'dayım asansör çalışmıyor
+[2] Turnike katı ile cadde arasındaki asansör
+
+═══════════════════════════════════════════════════════════════
+Bu rapor otomatik olarak oluşturulmuştur.
+İBB Metro İstanbul A.Ş. - Çağrı Merkezi
+Tel: 153 (İBB Çözüm Merkezi)
+═══════════════════════════════════════════════════════════════

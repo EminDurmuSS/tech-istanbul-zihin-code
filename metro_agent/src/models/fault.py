@@ -72,10 +72,13 @@ class FaultClassification(BaseModel):
 class FaultEnrichment(BaseModel):
     """Arıza zenginleştirme verileri"""
     station_info: Optional[Dict[str, Any]] = None
+    line_info: Optional[Dict[str, Any]] = None
     line_status: Optional[Dict[str, Any]] = None
+    equipment_info: Optional[Dict[str, Any]] = None
     passenger_stats: Optional[Dict[str, Any]] = None
     alternatives: List[str] = []
     similar_faults: List[Dict[str, Any]] = []
+    related_announcements: List[Dict[str, Any]] = []
     accessibility_impact: Optional[str] = None
 
 
@@ -117,9 +120,9 @@ class ExistingFault(BaseModel):
     """Mevcut arıza bilgisi"""
     exists: bool = True
     fault_id: str
-    station: str
-    equipment: str
-    status: str
+    station: Optional[str] = "Belirtilmemiş"
+    equipment: Optional[str] = "Belirtilmemiş"
+    status: str = "Bilinmiyor"
     created_at: Optional[str] = None
     estimated_resolution: Optional[str] = None
-    message: str
+    message: str = "Bu arıza sistemimizde kayıtlı."

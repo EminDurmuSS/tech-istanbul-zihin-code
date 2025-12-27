@@ -10,11 +10,13 @@ from src.api.openrouter_client import OpenRouterClient
 from src.agent.intent_classifier import IntentClassifier
 from src.agent.response_formatter import ResponseFormatter
 from src.modules.fault_manager import FaultManager
+from src.modules.conversational_fault_manager import ConversationalFaultManager
 from src.modules.service_status import ServiceStatusModule
 from src.modules.direction_helper import DirectionHelper
 from src.modules.timetable import TimetableModule
 from src.modules.fare_info import FareInfoModule
 from src.modules.accessibility import AccessibilityModule
+from src.modules.smart_api_router import SmartAPIRouter
 from src.models.report import Intent, IntentType, AgentResponse, UserResponse, InternalReport
 from src.utils.logger import get_logger
 
@@ -39,20 +41,22 @@ Kurallar:
         # API clients
         self.llm = OpenRouterClient()
         self.metro = MetroAPIClient()
-        
+
         # Core components
         self.intent_classifier = IntentClassifier(self.llm)
         self.response_formatter = ResponseFormatter()
-        
+        self.api_router = SmartAPIRouter(self.metro, self.llm)
+
         # Modules
         self.fault_manager = FaultManager(self.llm, self.metro)
+        self.conversational_fault_manager = ConversationalFaultManager(self.llm, self.metro)
         self.service_status = ServiceStatusModule(self.metro)
         self.direction_helper = DirectionHelper(self.metro, self.llm)
         self.timetable = TimetableModule(self.metro)
         self.fare_info = FareInfoModule(self.metro)
         self.accessibility = AccessibilityModule(self.metro)
-        
-        logger.info("MetroAgent initialized")
+
+        logger.info("MetroAgent initialized with SmartAPIRouter")
     
     async def process_message(
         self,
@@ -86,7 +90,7 @@ Kurallar:
             
             # 2. Intent'e göre işle
             response_text, internal_report, actions = await self._route_intent(
-                message, intent
+                message, intent, user_id
             )
             
             # 3. Response formatla
@@ -119,28 +123,35 @@ Kurallar:
     async def _route_intent(
         self,
         message: str,
-        intent: Intent
+        intent: Intent,
+        user_id: Optional[str] = None
     ) -> tuple:
         """Intent'e göre yönlendir"""
-        
+
         entities = intent.entities
         internal_report = None
         actions = ["log_query"]
-        
-        # FAULT REPORT
+
+        # FAULT REPORT - Conversational approach
         if intent.type == IntentType.FAULT_REPORT:
-            response_text, report = await self.fault_manager.handle_fault_report(
-                message, entities
+            # user_id olmazsa default kullan
+            if not user_id:
+                user_id = "default_user"
+
+            response_text, report, completed = await self.conversational_fault_manager.handle_message(
+                user_id, message
             )
+
             if report:
                 internal_report = InternalReport(
                     report_id=report.report_id,
                     intent=intent,
                     entities=entities,
-                    actions_taken=["create_ticket", "notify_department"],
+                    actions_taken=["create_ticket", "notify_department", "save_report"],
                     data=report.model_dump()
                 )
-                actions = ["create_ticket", "notify_department", "log_call"]
+                actions = ["create_ticket", "notify_department", "log_call", "save_report"]
+
             return response_text, internal_report, actions
         
         # FAULT INQUIRY

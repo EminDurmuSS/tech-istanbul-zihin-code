@@ -19,9 +19,9 @@ class Settings(BaseSettings):
     LLM_MAX_TOKENS: int = 2000
     
     # Metro API
-    METRO_API_BASE_URL: str = "https://api.metro.istanbul/api/MetroMobile/V2"
+    METRO_API_BASE_URL: str = "https://api.ibb.gov.tr/MetroIstanbul/api/MetroMobile/V2"
     METRO_API_KEY: Optional[str] = None
-    METRO_API_TIMEOUT: int = 30
+    METRO_API_TIMEOUT: int = 60
 
     # Logging
     LOG_LEVEL: str = "INFO"
